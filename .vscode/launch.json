@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Build Library (Make)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "preLaunchTask": "build", // To wywoła Twojego make'a
+            "program": "cmd", // Wykonujemy cokolwiek, byle przeszło preLaunchTask
+            "args": ["/c", "echo Build Finished"],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole"
+        }
+    ]
+}
