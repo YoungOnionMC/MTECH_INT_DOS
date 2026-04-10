@@ -1,9 +1,9 @@
-NASM       = "c:\program files\nasm\nasm.exe"
-OBJ_DIR    = build32
+NASM       = "C:\Users\James\AppData\Local\bin\NASM\nasm.exe"
+OBJ_DIR    = build64
 SRC_DIR    = src
 TARGET_OBJ = $(OBJ_DIR)\interupt.obj
 
-NASM_FLAGS = -f win32 -g -F cv8
+NASM_FLAGS = -f win64 -g -F cv8
 
 # --- Rules ---
 

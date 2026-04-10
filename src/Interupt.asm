@@ -49,92 +49,118 @@ section .text
 
         jmp .error
 
-        ret
-
         .read_char:         ; AH = 01h: Read character with echo
-            call _getchar   ; Result is returned in EAX (AL)
+            add rsp, 40
+            call _getchar   ; Result is returned in RAX (AL)
+            sub rsp, 40
         ret
 
         .print_char:        ; AH = 02h: Write character to STDOUT
-            push eax        ; Save EAX to preserve AH
+            push rax        ; Save RAX to preserve AH
+            push rcx
 
             and edx, 0xFF   ; Ensure only the character in DL is passed
-            push edx
+            mov rcx, rdx
+            sub rsp, 32
             call _putchar
-            add esp, 4
+            add rsp, 32
             
-            mov ah, byte [esp + 1] ; Restore AH from the stack
-            add esp, 4         
+            pop rcx
+            pop rax         ; Restore AH from the stack      
         ret
 
         .print_string:      ; AH = 09h: Write string to STDOUT
             ; Note: To support standard DOS '$' termination, 
             ; a loop converting '$' to null (0) would be required.
-            pushad
-            push edx        ; EDX contains the string pointer
+            push rax        ; pushad does not work in real mode, mimic it
+            push rcx
+            push rdx
+            push rbx
+            push rbp
+            push rsi
+            push rdi
+
+            mov rcx, rdx        ; EDX contains the string pointer
             call _printf
-            add esp, 4
-            popad
+
+            pop rdi         ; popad does not work in real mode
+            pop rsi
+            pop rbp
+            pop rbx
+            pop rdx
+            pop rcx
+            pop rax
         ret
 
         .buffer_input:      ; AH = 0Ah: Buffered string input
-            pushad          ; Save all general-purpose registers
+            push rax        ; pushad does not work in real mode, mimic it
+            push rcx
+            push rdx
+            push rbx
+            push rbp
+            push rsi
+            push rdi
 
-            sub esp, 128    ; Allocate 128-byte local buffer on the stack
-            mov ebp, esp    ; Set EBP as a pointer to the local buffer
-            mov ebx, ebp    ; Keep a copy of the buffer start address
+            sub rsp, 128    ; Allocate 128-byte local buffer on the stack
+            mov rbp, rsp    ; Set EBP as a pointer to the local buffer
+            mov rbx, rbp    ; Keep a copy of the buffer start address
 
             ; Prepare arguments for scanf("%s%n", local_buffer, &int21_buff_n)
-            push int21_buff_n     ; Argument 3: length pointer
-            push ebp              ; Argument 2: local buffer address
-            push int21_fmt_input  ; Argument 1: format string
+            mov rcx, int21_fmt_input  ; Argument 1: format string
+            mov rdx, rbp              ; Argument 2: local buffer address
+            mov r8, int21_buff_n     ; Argument 3: length pointer
             
             call _scanf
-            add esp, 12           ; Clean up scanf arguments
 
             ; Calculate address of original EDX passed via pushad
-            ; Current ESP + local buffer (128) + offset to EDX in pushad (20) = 148
-            mov ebp, esp
-            add ebp, 148
-            mov edx, [ebp]        ; EDX now points to the original DOS buffer
+            ; Current RSP + local buffer (128) + offset to RDX in pushad (32) = 160
+            mov rbp, rsp
+            add rbp, 160
+            mov rdx, [rbp]        ; EDX now points to the original DOS buffer
 
             ; 1. Store the actual number of characters read
-            mov eax, [int21_buff_n]
-            mov [edx + 1], al     ; Set 'actual length' byte
+            mov rax, [int21_buff_n]
+            mov [rdx + 1], al     ; Set 'actual length' byte
             
             ; 2. Determine bytes to copy (clamp to max buffer size)
             mov ah, al            ; Current length
-            mov al, [edx]         ; Max length defined by user
+            mov al, [rdx]         ; Max length defined by user
             cmp al, ah
             jna .ifNAbove
             mov al, ah            ; If actual > max, use max
             .ifNAbove:
 
             ; 3. Copy characters from stack to DOS buffer
-            mov edi, edx        
-            add edi, 2            ; EDI = destination (DOS buffer content start)
-            mov esi, esp          ; ESI = source (local stack buffer)
+            mov rdi, rdx        
+            add rdi, 2            ; RDI = destination (DOS buffer content start)
+            mov rsi, rsp          ; RSI = source (local stack buffer)
             
-            xor ecx, ecx
+            xor rcx, rcx
             mov cl, al            ; Number of bytes to copy
-            rep movsb             ; Copy string from ESI to EDI
+            rep movsb             ; Copy string from RSI to RDI
 
-            add esp, 128          ; Release local stack buffer
+            add rsp, 128          ; Release local stack buffer
             
             ; --- Cleanup ---
             ; Temporary fix for the leftover newline in stdin. 
             ; Note: This handles Enter but may cause issues if input contains spaces.
             call _getchar         
-            popad                 ; Restore all registers
+            pop rdi               ; popad does not work in real mode     
+            pop rsi
+            pop rbp
+            pop rbx
+            pop rdx
+            pop rcx
+            pop rax
         ret         
 
         .error:
             push int21_err_msg
             call _printf 
-            add esp, 4
+            add rsp, 8
             ; Fall through to exit
 
         .exit:
-            and eax, 0xFF         ; Use only AL for exit code
-            push eax
+            and rax, 0xFF         ; Use only AL for exit code
+            push rax
             call _exit
