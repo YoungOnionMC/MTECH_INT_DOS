@@ -1,4 +1,4 @@
-NASM       = "C:\Users\James\AppData\Local\bin\NASM\nasm.exe"
+NASM       = "c:\program files\nasm\nasm.exe"
 OBJ_DIR    = build64
 SRC_DIR    = src
 TARGET_OBJ = $(OBJ_DIR)\interupt.obj
